@@ -80,18 +80,20 @@ class couch_dbinfo_Runner(object):
 
 
 class cbcollectRunner(object):
-    def __init__(self, server, path, local=False):
+    def __init__(self, server, path, init_args, local=False):
         self.server = server
         self.path = path
+        self.init_args = init_args
         self.local = local
 
     def run(self):
-        file_name = "%s-%s-diag.zip" % (self.server.ip, time_stamp())
+        file_name = "%s-%s-%s-diag.zip" % (self.server.ip, self.server.port, time_stamp())
+        file_name = self.path + os.sep + file_name
         if not self.local:
             from lib.remote.remote_util import RemoteMachineShellConnection
             remote_client = RemoteMachineShellConnection(self.server)
             print "Collecting logs from %s\n" % self.server.ip
-            output, error = remote_client.execute_cbcollect_info(file_name)
+            output, error = remote_client.execute_cbcollect_info(file_name, self.init_args)
             print "\n".join(error)
 
             user_path = "/home/"
@@ -113,6 +115,11 @@ class cbcollectRunner(object):
                 raise Exception("Fail to download zipped logs from %s"
                                                      % self.server.ip)
             remote_client.execute_command("rm -f %s" % os.path.join(remote_path, file_name))
+            remote_client.disconnect()
+        else:
+            from lib.remote.remote_util import RemoteMachineShellConnection
+            remote_client = RemoteMachineShellConnection(self.server)
+            output, error = remote_client.execute_cbcollect_info(file_name, self.init_args)
             remote_client.disconnect()
 
 def main():

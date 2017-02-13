@@ -179,7 +179,7 @@ def parse_conf_file(filename, tests, params):
 def create_headers(username, password):
     authorization = base64.encodestring('%s:%s' % (username, password))
     return {'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': 'Basic %s' % authorization,
+            'Authorization': 'Basic %s' % authorization.rstrip(),
             'Accept': '*/*'}
 
 
@@ -193,7 +193,7 @@ def get_server_logs(input, path):
             req = urllib2.Request(diag_url)
             req.headers = create_headers(input.membase_settings.rest_username,
                                          input.membase_settings.rest_password)
-            filename = "{0}/{1}-diag.txt".format(path, server.ip)
+            filename = "{0}/{1}-{2}-diag.txt".format(path, server.ip, server.port)
             page = urllib2.urlopen(req)
             with open(filename, 'wb') as output:
                 os.write(1, "downloading {0} ...".format(server.ip))
@@ -219,14 +219,17 @@ def get_server_logs(input, path):
             print "unable to obtain diags from %s %s" % (diag_url, e)
 
 
-def get_cbcollect_info(input, path):
+def get_cbcollect_info(input, path, ns_server_path):
+    counter = 0
     for server in input.servers:
-        print "grabbing cbcollect from {0}".format(server.ip)
+        init_args = os.path.normpath(ns_server_path + os.sep + "n_" + str(counter) + os.sep + "initargs")
+        print "grabbing cbcollect from {0}.{1}".format(server.ip, server.port)
         path = path or "."
         try:
-            cbcollectRunner(server, path).run()
+            cbcollectRunner(server, path, init_args, local=True).run()
         except Exception as e:
             print "NOT POSSIBLE TO GRAB CBCOLLECT FROM {0}: {1}".format(server.ip, e)
+        counter = counter + 1
 
 def get_couch_dbinfo(input, path):
     for server in input.servers:
@@ -301,6 +304,8 @@ def main():
     xunit = XUnitTestResult()
     # Create root logs directory
     abs_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+    # Generate path to ns_server data directory
+    ns_server_path = os.path.normpath(abs_path + os.sep + os.pardir + os.sep + "ns_server" + os.sep + "data")
     # Create testrunner logs subdirectory
     str_time = time.strftime("%y-%b-%d_%H-%M-%S", time.localtime())
     root_log_dir = os.path.join(abs_path, "logs{0}testrunner-{1}".format(os.sep, str_time))
@@ -420,7 +425,7 @@ def main():
 
             if "get-cbcollect-info" in TestInputSingleton.input.test_params:
                 if TestInputSingleton.input.param("get-cbcollect-info", True):
-                    get_cbcollect_info(TestInputSingleton.input, logs_folder)
+                    get_cbcollect_info(TestInputSingleton.input, logs_folder, ns_server_path)
 
             if "get-couch-dbinfo" in TestInputSingleton.input.test_params and \
                 TestInputSingleton.input.param("get-couch-dbinfo", True):

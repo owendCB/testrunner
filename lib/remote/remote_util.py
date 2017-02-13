@@ -2633,7 +2633,7 @@ class RemoteMachineShellConnection:
         output = []
         error = []
         temp = ''
-        if self.remote and self.use_sudo or use_channel:
+        if self.remote and (self.use_sudo or use_channel):
             channel = self._ssh_client.get_transport().open_session()
             channel.get_pty()
             channel.settimeout(900)
@@ -3463,16 +3463,17 @@ class RemoteMachineShellConnection:
         self.log_command_output(output, error)
         return output, error
 
-    def execute_cbcollect_info(self, file):
-        cbcollect_command = "%scbcollect_info" % (LINUX_COUCHBASE_BIN_PATH)
+    def execute_cbcollect_info(self, file. init_args):
+        cbcollect_command = "%scbcollect_info --single-node-diag --initargs=" % (LINUX_COUCHBASE_BIN_PATH)
         if self.nonroot:
-            cbcollect_command = "/home/%s%scbcollect_info" % (self.username,
+            cbcollect_command = "/home/%s%scbcollect_info --single-node-diag --initargs=" % (self.username,
                                                               LINUX_COUCHBASE_BIN_PATH)
         self.extract_remote_info()
         if self.info.type.lower() == 'windows':
-            cbcollect_command = "%scbcollect_info.exe" % (testconstants.WIN_COUCHBASE_BIN_PATH)
+            cbcollect_command = "%scbcollect_info.exe --single-node-diag --initargs=" % (testconstants.WIN_COUCHBASE_BIN_PATH)
         if self.info.distribution_type.lower() == 'mac':
-            cbcollect_command = "%scbcollect_info" % (testconstants.MAC_COUCHBASE_BIN_PATH)
+            cbcollect_command = "%scbcollect_info  --single-node-diag --initargs=" % (testconstants.MAC_COUCHBASE_BIN_PATH)
+        cbcollect_command = cbcollect_command + str(init_args)
 
         command = "%s %s" % (cbcollect_command, file)
         output, error = self.execute_command(command, use_channel=True)
